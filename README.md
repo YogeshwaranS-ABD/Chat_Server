@@ -18,11 +18,11 @@ Both server and client scripts are written assuming that the database already ha
 >	7. (Lost_Count: Int) 
 
 
-### session
-	1. (Date : String)
-	2. (User : String)
-	3. (In_Time : String)
-	4. (Out_Time: String)
+### session :
+>	1. (Date : String)
+>	2. (User : String)
+>	3. (In_Time : String)
+>	4. (Out_Time: String)
 
 
 This repository has a database with empty tables in the above schema.
