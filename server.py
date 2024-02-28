@@ -4,6 +4,7 @@ from threading import Thread, Lock
 import os
 from datetime import datetime as dt
 import sqlite3 as sql
+from time import sleep
 from ui import server_app
 
 class s_server:
@@ -27,7 +28,7 @@ class s_server:
 		self.conn = sql.connect('storage.db')
 
 	def query_handler(self,operation='SELECT',table='server',value=None):
-		with self.lock:
+		with self.mp_lock:
 			cursor =  self.conn.cursor()
 			if operation=='SELECT':
 				q = f"{operation} * FROM {table};"
@@ -50,7 +51,9 @@ class s_server:
 
 	def retrive(self):
 		data = self.query_handler()
-		if data[-1][0]!=self.date:
+		if data==[]:
+			self.query_handler('INSERT','server',(self.date,self.name,self.avg_rating,self.today_clients,self.monthly_clients,self.lost,self.total_clients_reached))
+		elif data[-1][0]!=self.date:
 			self.query_handler('INSERT','server',(self.date,self.name,data[-1][2],self.today_clients,data[-1][4],data[-1][5],data[-1][6]))
 			self.avg_rating = data[-1][2]
 			self.monthly_clients = data[-1][4]
@@ -64,7 +67,7 @@ class s_server:
 			self.lost = data[-1][6]
 
 	def session_details(self,conn):
-		with self.lock:
+		with self.mp_lock:
 			cursor = conn.cursor()
 			cursor.execute("SELECT * FROM session;")
 			data = cursor.fetchall()
@@ -72,14 +75,14 @@ class s_server:
 			return data
 
 	def add_session(self,conn,values:tuple):
-		with self.lock:
+		with self.mp_lock:
 			cursor = conn.cursor()
 			cursor.execute(f"INSERT INTO session VALUES {values}")
 			cursor.close()
 			conn.commit()
 
 	def update_exit_time(self,conn:sql.Connection, c_name:str):
-		with self.lock:
+		with self.mp_lock:
 			cursor = conn.cursor()
 			cursor.execute(f"UPDATE session SET Out_Time = '{dt.now().strftime('%I:%M:%S %p')}' WHERE User='{c_name}' AND Date = '{self.date}';")
 			cursor.close()
@@ -167,10 +170,10 @@ class s_server:
 		while True:
 			c_sock, c_addr = s_sock.accept()
 			
-			if c_addr[1]!=1234:
+			if c_addr[1]==1234:
 				c_sock.close()
 
-			elif c_addr[1] != 5000 and c_addr[1]!=1234:
+			elif c_addr[1] != 5000:
 				c_sock.sendall(name.encode())
 				self.total_clients_reached+=1
 				if len(self.clients) == 3: #3 is for number of clients per server
@@ -185,6 +188,7 @@ class s_server:
 						self.clients.append(c_sock)
 					cl_thread = Thread(target=self.handle_client, args=(c_sock,gui))
 					cl_thread.start()
+					sleep(10)
 
 			else:
 				msg = c_sock.recv(1024).decode()

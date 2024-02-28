@@ -33,6 +33,7 @@ class MultipleServer:
 		sock = socket(AF_INET,SOCK_STREAM)
 		sock.setsockopt(SOL_SOCKET,SO_REUSEADDR,1)
 		sock.bind(('localhost',1234))
+		sock.settimeout(0.050)
 		for i in range(3):
 			if not sock.connect_ex(('localhost',self.ports[i])):
 				return ('localhost',self.ports[i])
