@@ -130,8 +130,8 @@ class s_server:
 						c_sock.close()
 
 	def stat_updater(self,gui):
-		self.query_handler(operation='UPDATE',table='server',value=(self.avg_rating,self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
-		self.retrive()
+		# self.query_handler(operation='UPDATE',table='server',value=(self.avg_rating,self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
+		# self.retrive()
 		if len(self.clients)!=0:
 			gui.update_stat([self.avg_rating, self.today_clients,self.monthly_clients,self.lost, self.total_clients_reached, self.current_client])
 		else:
@@ -182,8 +182,8 @@ class s_server:
 			elif c_addr[1] != 5000:
 				c_sock.sendall(name.encode())
 				self.total_clients_reached+=1
-				if len(self.clients) == 3: #3 is for number of clients per server
-					c_sock.sendall('Server busy, try after 5 mins!'.encode())
+				if len(self.clients) == 1: #3 is for number of clients per server
+					c_sock.sendall(' Server busy, try after 5 mins!'.encode())
 					self.lost+=1
 					c_sock.close()
 					
