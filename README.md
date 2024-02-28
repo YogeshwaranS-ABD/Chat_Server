@@ -8,22 +8,22 @@ The server script is imported into another script where the number of instances 
 
 Both server and client scripts are written assuming that the database already has the tables in the following schema.
 
-1. servers : {
-			(Date: String)
-			(Name: String)
-			(Average_Rating: Float)
-			(Today_Count: Int)
-			(Monthly_Count: Int)
-			(Total_Approaches: Int)
-			(Lost_Count: Int) 
+# servers :
+1. (Date: String)
+2. (Name: String)
+3. (Average_Rating: Float)
+4. (Today_Count: Int)
+5. (Monthly_Count: Int)
+6. (Total_Approaches: Int)
+7. (Lost_Count: Int) 
 		}
 
-2. session : {
-			(Date : String)
-			(User : String)
-			(In_Time : String)
-			(Out_Time: String)
-		}
+# session
+1. (Date : String)
+2. (User : String)
+3. (In_Time : String)
+4. (Out_Time: String)
+
 
 This repository has a database with empty tables in the above schema.
 
