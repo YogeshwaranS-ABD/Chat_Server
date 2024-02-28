@@ -1,6 +1,7 @@
 from socket import SO_REUSEADDR, SOL_SOCKET, socket, AF_INET, SOCK_STREAM
 from socket import AF_INET, SOCK_STREAM
 from threading import Thread, Lock
+from multiprocessing.shared_memory import ShareableList
 import os
 from datetime import datetime as dt
 import sqlite3 as sql
@@ -24,6 +25,7 @@ class s_server:
 		self.client_names={}
 		self.current_client='None'
 		self.count=0
+		self.cl_in_time = {}
 		self.addr = [('localhost',i) for i in ports]
 		self.conn = sql.connect('storage.db')
 
@@ -76,6 +78,7 @@ class s_server:
 
 	def add_session(self,conn,values:tuple):
 		with self.mp_lock:
+			self.cl_in_time[values[1]]=values[2]
 			cursor = conn.cursor()
 			cursor.execute(f"INSERT INTO session VALUES {values}")
 			cursor.close()
@@ -84,7 +87,7 @@ class s_server:
 	def update_exit_time(self,conn:sql.Connection, c_name:str):
 		with self.mp_lock:
 			cursor = conn.cursor()
-			cursor.execute(f"UPDATE session SET Out_Time = '{dt.now().strftime('%I:%M:%S %p')}' WHERE User='{c_name}' AND Date = '{self.date}';")
+			cursor.execute(f"UPDATE session SET Out_Time = '{dt.now().strftime('%I:%M:%S %p')}' WHERE User='{c_name}' AND Date = '{self.date}' AND In_Time = '{self.cl_in_time[c_name]}';")
 			cursor.close()
 			conn.commit()
 
@@ -127,6 +130,8 @@ class s_server:
 						c_sock.close()
 
 	def stat_updater(self,gui):
+		self.query_handler(operation='UPDATE',table='server',value=(self.avg_rating,self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
+		self.retrive()
 		if len(self.clients)!=0:
 			gui.update_stat([self.avg_rating, self.today_clients,self.monthly_clients,self.lost, self.total_clients_reached, self.current_client])
 		else:
@@ -166,9 +171,10 @@ class s_server:
 				break
 
 	
-	def accept_clients(self,s_sock,gui, name):
+	def accept_clients(self,s_sock,gui, name, idx):
 		while True:
 			c_sock, c_addr = s_sock.accept()
+
 			
 			if c_addr[1]==1234:
 				c_sock.close()
@@ -189,6 +195,12 @@ class s_server:
 					cl_thread = Thread(target=self.handle_client, args=(c_sock,gui))
 					cl_thread.start()
 					sleep(10)
+					# Reassign the status of the server to 0.
+					# with self.mp_lock:
+					# 	temp_sl = ShareableList(None,name='status')
+					# 	temp_sl[idx] = 0
+					# 	temp_sl.shm.close()
+					# 	temp_sl.shm.unlink()
 
 			else:
 				msg = c_sock.recv(1024).decode()
@@ -218,7 +230,7 @@ class s_server:
 
 		gui = server_app(self.name,self.avg_rating,[self.today_clients,self.monthly_clients, self.lost, self.total_clients_reached], self.current_client)
 
-		accept_thread = Thread(target=self.accept_clients, args=(s_sock,gui, name),daemon = True)
+		accept_thread = Thread(target=self.accept_clients, args=(s_sock,gui, name,idx),daemon = True)
 		accept_thread.start()
 
 		gui.app.mainloop()

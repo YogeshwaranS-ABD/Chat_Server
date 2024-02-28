@@ -1,15 +1,18 @@
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from multiprocessing import Process, Lock
+from multiprocessing.shared_memory import ShareableList
 from server import s_server as SERVER
 
 class MultipleServer:
 	
 	def __init__(self,n:int, algorithm:str) -> None:
 		self.algorithm = algorithm.lower()
+		self.ports = [x for x in range(5010,5010+n)]
 		self.count=0
 		self.processes = []
 		self.number = n
-		self.ports = [x for x in range(5010,5010+n)]
+		self.mp_lock = Lock()
+		# sl = ShareableList([0 for i in range(n)],name='status')
 
 	def start_servers(self,serve):
 		for i in range(self.number):
@@ -30,14 +33,23 @@ class MultipleServer:
 
 
 	def least_connection(self):
-		sock = socket(AF_INET,SOCK_STREAM)
-		sock.setsockopt(SOL_SOCKET,SO_REUSEADDR,1)
-		sock.bind(('localhost',1234))
-		sock.settimeout(0.050)
-		for i in range(3):
-			if not sock.connect_ex(('localhost',self.ports[i])):
-				return ('localhost',self.ports[i])
-		sock.close()
+		with self.mp_lock:
+			temp_sl = ShareableList(None,name='status')
+			for i in range(self.number):
+				if temp_sl[i]!=1:
+					temp_sl[i]=1
+					temp_sl.shm.close()
+					temp_sl.shm.unlink()
+					return ('localhost',self.ports[i])
+
+		# sock = socket(AF_INET,SOCK_STREAM)
+		# sock.setsockopt(SOL_SOCKET,SO_REUSEADDR,1)
+		# sock.bind(('localhost',1234))
+		# sock.settimeout(0.050)
+		# for i in range(3):
+		# 	if not sock.connect_ex(('localhost',self.ports[i])):
+		# 		return ('localhost',self.ports[i])
+		# sock.close()
 
 
 	def start_balancer(self):	
@@ -47,8 +59,7 @@ class MultipleServer:
 		s.bind(('localhost',12345))
 		s. listen(3)
 
-		mp_lock = Lock()
-		serve = SERVER(mp_lock,self.ports)
+		serve = SERVER(self.mp_lock,self.ports)
 
 		self.start_servers(serve)
 
