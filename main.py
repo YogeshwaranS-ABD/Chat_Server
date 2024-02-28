@@ -78,4 +78,4 @@ class MultipleServer:
 
 if __name__ == '__main__':
 	n = int(input('Enter the number of Servers : '))
-	MultipleServer(n,'least connection').start_balancer()
+	MultipleServer(n,'round robin').start_balancer()
