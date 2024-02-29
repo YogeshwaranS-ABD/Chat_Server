@@ -42,6 +42,7 @@ class s_server:
 			gui.msg_post(f"{dt.now().strftime('%d %b %y - %I:%M:%S %p ->')} {self.current_client} exited the server")
 			self.send_to_servers(f"{self.current_client} exited the server")
 			self.db.update_rating(float(rating.split()[-1].strip()))
+			gui.update_stat([self.shl[0], self.shl[1],self.shl[2],self.shl[4], self.shl[3], self.current_client])
 			self.db.update_exit_time(self.current_client, self.cl_in_time)
 		else:
 			gui.msg_post(f"{dt.now().strftime('%d %b %y - %I:%M:%S %p ->')} {message}")

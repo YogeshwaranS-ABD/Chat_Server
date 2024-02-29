@@ -10,22 +10,16 @@ class MultipleServer:
 	
 	def __init__(self,n:int, algorithm:str, approach:str, shl:ShareableList) -> None:
 		self.algorithm = algorithm.lower()
+		self.approach = approach
+		self.number = n
+		self.shl = shl
 		self.ports = [x for x in range(5010,5010+n)]
 		self.count=0
 		self.processes = []
-		self.number = n
-		self.shl = shl
 		self.mp_lock = Lock()	#this lock object will be shared between the servers to syncronize the writing in database
-		self.approach = approach
 		self.db = db(self.mp_lock,self.shl)
 		self.db.retrive()	# This is to fetch the data from the database and to put it in shared memory.
 		self.servers_sem = ShareableList([1 for i in range(n)]) #replace 1 with the max no. of clients per server.
-
-	def check_alive(self):
-		for p in self.processes:
-			if p.is_alive():
-				return True
-		return False
 
 	def start_servers(self,serve):
 		for i in range(self.number):
@@ -39,7 +33,7 @@ class MultipleServer:
 				pid = os.fork()
 				if pid==0:
 					serve.server(f"Server-{i+1}",i,self.servers_sem)
-		except OSError:
+		except:
 			pass
 
 	def stop_servers(self):
@@ -89,8 +83,6 @@ class MultipleServer:
 		while True:
 			try:
 				print('===> waiting for new conncetion <===\n')
-				if not self.check_alive() and self.approach=='process':
-					break
 				c_sock, c_addr = s.accept()
 
 				if self.algorithm == 'round robin':
