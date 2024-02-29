@@ -1,7 +1,7 @@
 # Chat_Server
  This is a chat server apllication made in python language.
 
--[] Writing the documentation.
+- [ ] Writing the documentation.
 
 This Repository has the server and client scripts and a Database file along with a class file for GUI. The database file is named as storage.db and has two tables named server and session.
 
