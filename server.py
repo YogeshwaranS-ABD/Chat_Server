@@ -1,113 +1,27 @@
+from multiprocessing.shared_memory import ShareableList
 from socket import SO_REUSEADDR, SOL_SOCKET, socket, AF_INET, SOCK_STREAM
 from socket import AF_INET, SOCK_STREAM
 from threading import Thread, Lock
-# from multiprocessing.shared_memory import ShareableList
 import os
 from datetime import datetime as dt
 import sqlite3 as sql
-from time import sleep
+from dbHandler import dbHandle as db
 from ui import server_app
 
 class s_server:
-	def __init__(self,mlock,ports,mm)->None:
+	def __init__(self,mlock,ports,shl)->None:
 		self.lock = Lock()
 		self.mp_lock = mlock
 		self.date = f"{dt.now().strftime('%d %b %y')}"
-		self.time = f"{dt.now().strftime('%I:%M:%S %p')}"
 		self.port = 0
 		self.name = ''
 		self.clients = []
 		self.client_names={}
 		self.current_client='None'
-		self.count=0
 		self.cl_in_time = {}
 		self.addr = [('localhost',i) for i in ports]
-
-		
-
-		self.monthly_clients=0 #mm[0]
-		self.today_clients=0 #mm[1]
-		self.total_clients_reached=0 #mm[2]
-		self.lost = 0 #mm[3]
-		self.avg_rating =  0 #mm[4]
-
-	def query_handler(self,operation='SELECT',table='server',value=None):
-		with self.mp_lock:
-			conn = sql.connect('storage.db')
-			cursor =  conn.cursor()
-			if operation=='SELECT':
-				q = f"{operation} * FROM {table};"
-				cursor.execute(q)
-				return cursor.fetchall()
-			elif operation=='INSERT' and value!=None:
-				q = f"INSERT INTO {table} VALUES {value};"
-				cursor.execute(q)
-				conn.commit()
-			elif operation =='UPDATE' and value!=None:
-				q = f"UPDATE {table} SET \
-						Average_Rating = {self.update_rating(value[0]):.2f},\
-						Today_Count = {self.today_clients},\
-						Monthly_Count = {self.monthly_clients},\
-						Total_Approaches = {self.total_clients_reached},\
-						Lost_Count = {self.lost} WHERE Date = '{self.date}';"
-				cursor.execute(q)
-				conn.commit()
-			cursor.close()
-			conn.close()
-
-	def retrive(self):
-		data = self.query_handler()
-		if data==[]:
-			self.query_handler('INSERT','server',(self.date,self.name,self.avg_rating,self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
-		elif data[-1][0]!=self.date:
-			self.query_handler('INSERT','server',(self.date,self.name,data[-1][2],self.today_clients,data[-1][4],data[-1][5],data[-1][6]))
-			self.avg_rating = data[-1][2] #Avg. Rating
-			self.monthly_clients = data[-1][4] #Monthly_Count
-			self.total_clients_reached = data[-1][5] #Total_Reached
-			self.lost = data[-1][6] #Lost_Count
-		else:
-			self.avg_rating = data[-1][2] #Avg. Ratin
-			self.today_clients = data[-1][3] #Today_Count
-			self.monthly_clients = data[-1][4] #Monthly_Co
-			self.total_clients_reached = data[-1][5] #Total_Reac
-			self.lost = data[-1][6] #Lost_Count
-
-	def session_details(self):
-		with self.mp_lock:
-			conn = sql.connect('storage.db')
-			cursor = conn.cursor()
-			cursor.execute("SELECT * FROM session;")
-			data = cursor.fetchall()
-			cursor.close()
-			conn.close()
-			return data
-
-	def add_session(self,values:tuple):
-		with self.mp_lock:
-			self.cl_in_time[values[1]]=values[2]
-			conn = sql.connect('storage.db')
-			cursor = conn.cursor()
-			cursor.execute(f"INSERT INTO session VALUES {values}")
-			cursor.close()
-			conn.commit()
-			conn.close()
-
-	def update_exit_time(self,c_name:str):
-		with self.mp_lock:
-			conn = sql.connect('storage.db')
-			cursor = conn.cursor()
-			cursor.execute(f"UPDATE session SET Out_Time = '{dt.now().strftime('%I:%M:%S %p')}' WHERE User='{c_name}' AND Date = '{self.date}' AND In_Time = '{self.cl_in_time[c_name]}';")
-			cursor.close()
-			conn.commit()
-			conn.close()
-
-	def update_rating(self,rate):
-		if self.avg_rating == 0:
-			self.avg_rating = rate
-		else:
-			self.avg_rating = (self.avg_rating*(self.monthly_clients-1)+rate)/self.monthly_clients
-		return self.avg_rating
-
+		self.shl = ShareableList(name=shl.shm.name)
+		self.db = db(self.mp_lock,shl)
 
 	def send_to_servers(self,msg):
 		with self.mp_lock:
@@ -127,8 +41,8 @@ class s_server:
 			rating = message.split()[-1]
 			gui.msg_post(f"{dt.now().strftime('%d %b %y - %I:%M:%S %p ->')} {self.current_client} exited the server")
 			self.send_to_servers(f"{self.current_client} exited the server")
-			self.update_rating(float(rating.split()[-1].strip()))
-			self.update_exit_time(self.current_client)
+			self.db.update_rating(float(rating.split()[-1].strip()))
+			self.db.update_exit_time(self.current_client, self.cl_in_time)
 		else:
 			gui.msg_post(f"{dt.now().strftime('%d %b %y - %I:%M:%S %p ->')} {message}")
 			with self.lock:
@@ -140,15 +54,15 @@ class s_server:
 						c_sock.close()
 
 	def stat_updater(self,gui):
-		# self.query_handler(operation='UPDATE',table='server',value=(self.avg_rating,self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
+		# self.query_handler(operation='UPDATE',table='server',value=(self.shl[0],self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
 		# self.retrive()
 		if len(self.clients)!=0:
-			gui.update_stat([self.avg_rating, self.today_clients,self.monthly_clients,self.lost, self.total_clients_reached, self.current_client])
+			gui.update_stat([self.shl[0], self.shl[1],self.shl[2],self.shl[4], self.shl[3], self.current_client])
 		else:
-			gui.update_stat([self.avg_rating, self.today_clients,self.monthly_clients, self.lost, self.total_clients_reached, "None"])
+			gui.update_stat([self.shl[0], self.shl[1],self.shl[2], self.shl[4], self.shl[3], "None"])
 
 
-	def handle_client(self,c_sock, gui):
+	def handle_client(self,c_sock, gui,shl_status,idx):
 		conn2 = sql.connect('storage.db')
 		while True:
 			try:
@@ -162,12 +76,17 @@ class s_server:
 					self.current_client = c_name
 					self.stat_updater(gui)
 					value = (self.date, c_name, f"{dt.now().strftime('%I:%M:%S %p')}", 0)
-					self.add_session(value)
+					self.db.add_session(value,self.cl_in_time)
 				if 'stop' in message:
 					self.send_msg(gui,message, c_sock, True)
 					# c_sock.sendall('Connection Closed EOC'.encode())
 					with self.lock:
 						self.clients.remove(c_sock)
+					temp_sl = ShareableList(name=shl_status.shm.name)
+					with self.mp_lock:
+						temp_sl[idx]+=1
+					# print('='*10,temp_sl,'='*10)
+					temp_sl.shm.close()
 					c_sock.close()
 					break
 				else:
@@ -182,36 +101,30 @@ class s_server:
 		conn2.close()
 
 	
-	def accept_clients(self,s_sock,gui, name, idx):
+	def accept_clients(self,s_sock,gui, name, shl_status,idx):
 		while True:
 			c_sock, c_addr = s_sock.accept()
-
 			
 			if c_addr[1]==1234:
 				c_sock.close()
 
 			elif c_addr[1] != 5000:
 				c_sock.sendall(name.encode())
-				self.total_clients_reached+=1
-				if len(self.clients) == 1: #3 is for number of clients per server
+				with self.mp_lock:
+					self.shl[3]+=1
+				if len(self.clients) == 2: #_ is for number of clients per server
 					c_sock.sendall(' Server busy, try after 5 mins!'.encode())
-					self.lost+=1
+					with self.mp_lock:
+						self.shl[4]+=1
 					c_sock.close()
 					
 				else:
-					with self.lock:
-						self.monthly_clients+=1
-						self.today_clients+=1
+					with self.mp_lock:
+						self.shl[2]+=1
+						self.shl[1]+=1
 						self.clients.append(c_sock)
-					cl_thread = Thread(target=self.handle_client, args=(c_sock,gui))
+					cl_thread = Thread(target=self.handle_client, args=(c_sock,gui,shl_status,idx))
 					cl_thread.start()
-					sleep(10)
-					# Reassign the status of the server to 0.
-					# with self.mp_lock:
-					# 	temp_sl = ShareableList(None,name='status')
-					# 	temp_sl[idx] = 0
-					# 	temp_sl.shm.close()
-					# 	temp_sl.shm.unlink()
 
 			else:
 				msg = c_sock.recv(1024).decode()
@@ -228,30 +141,33 @@ class s_server:
 
 
 
-	def server(self,name, idx):
+	def server(self,name:str, idx:int, shl_status:ShareableList):
 		self.name = name
 		self.port = self.addr[idx][1]
-		self.retrive()
+
 		s_sock = socket(AF_INET,SOCK_STREAM)
 		s_sock.setsockopt(SOL_SOCKET,SO_REUSEADDR,1)
 		s_sock.bind(self.addr[idx])
 		s_sock.listen(1)
 
-		print(s_sock, os.getpid())
+		# print(s_sock, os.getpid())
 
-		gui = server_app(self.name,self.avg_rating,[self.today_clients,self.monthly_clients, self.lost, self.total_clients_reached], self.current_client)
+		gui = server_app(self.name,self.shl[0],[self.shl[1],self.shl[2], self.shl[4], self.shl[3]], self.current_client)
 
-		accept_thread = Thread(target=self.accept_clients, args=(s_sock,gui, name,idx),daemon = True)
+		accept_thread = Thread(target=self.accept_clients, args=(s_sock,gui, name, shl_status,idx),daemon = True)
 		accept_thread.start()
 
 		gui.app.mainloop()
 
-		self.query_handler(operation='UPDATE',table='server',value=(self.avg_rating,self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
-		self.retrive()
+		self.db.query_handler(operation='UPDATE',table='server',value=(self.shl[0],self.shl[1],self.shl[2],self.shl[3],self.shl[4]))
 
 		s_sock.close()
 
+	def __del__(self):
+		self.shl.shm.close()
+		del(self.date, self.clients, self.client_names, self.cl_in_time, self.mp_lock, 
+			self.lock,self.current_client, self.shl, self.addr, self.port, self.name, self.db)
+
 
 # s = s_server()
-
 # s.server('server-1',0)

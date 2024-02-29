@@ -9,6 +9,10 @@ class SingleClient:
 		self.c_sock = socket(AF_INET, SOCK_STREAM)
 		self.attempt = 0
 
+	def reopen_socket(self):
+		self.c_sock.close()
+		self.c_sock = socket(AF_INET,SOCK_STREAM)
+
 	def recv_msg(self,c_sock, ui):
 		while True:
 			try:
@@ -27,18 +31,20 @@ class SingleClient:
 			self.c_sock.connect(('localhost',self.PORT))
 
 			serve_addr = self.c_sock.recv(1024)
+
 			if serve_addr == b'SNA wait':
-				if self.attempt > 1:
+				if self.attempt == 1:
+					print('The connection is lost...')
 					exit(1)
 				gui = dialog2()
 				self.attempt+=1
-				sleep(5)
+				sleep(10)
+				self.reopen_socket()
 				self.start_client()
 			else:
 				serve_addr = eval(serve_addr)
-			self.c_sock.close()
-
-			self.c_sock = socket(AF_INET, SOCK_STREAM)
+			
+			self.reopen_socket()
 			self.c_sock.connect(serve_addr)
 
 			server_name = self.c_sock.recv(1024).decode()

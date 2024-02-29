@@ -1,4 +1,4 @@
-from tkinter import END, Button, Entry, Frame, Message, Text, Tk, Label, Toplevel
+from tkinter import END, Button, Entry, Frame, Message, Tk, Label, Toplevel
 from tkinter.scrolledtext import ScrolledText
 from datetime import datetime as dt
 
@@ -130,7 +130,7 @@ class dialog2:
 		self.app = Tk()
 		self.app.resizable(False, False)
 		self.msg = Message(self.app,bg='#333333',fg='#ffffff',width=300,pady=10, justify='center', text="Sorry, All servers are busy...\n\nTry after 5 minutes!\n\nThank you!")
-		self.btn_close = Button(self.app, text='Wait for 5 mins', command=self.wait)
+		self.btn_close = Button(self.app, text='Close', command=self.close)
 
 		self.app.geometry('300x150')
 		self.app.title('!! Alert !!')
@@ -139,9 +139,6 @@ class dialog2:
 		self.btn_close.pack()
 
 		self.app.mainloop()
-
-	def wait(self):
-		self.app.after(5000,self.close)
 
 	def close(self):
 		self.app.destroy()
