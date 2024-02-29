@@ -24,20 +24,19 @@ class SingleClient:
 			except:
 				c_sock.close()
 				break
+
+
 	def start_client(self):
-
 		try:
-			
 			self.c_sock.connect(('localhost',self.PORT))
-
 			serve_addr = self.c_sock.recv(1024)
-
 			if serve_addr == b'SNA wait':
 				if self.attempt == 1:
 					print('The connection is lost...')
 					exit(1)
 				gui = dialog2()
 				self.attempt+=1
+				print("Retrying in 10s")
 				sleep(10)
 				self.reopen_socket()
 				self.start_client()

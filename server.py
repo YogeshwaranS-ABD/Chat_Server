@@ -1,16 +1,16 @@
-from multiprocessing.shared_memory import ShareableList
+from multiprocessing.shared_memory import ShareableList 
 from socket import SO_REUSEADDR, SOL_SOCKET, socket, AF_INET, SOCK_STREAM
 from socket import AF_INET, SOCK_STREAM
 from threading import Thread, Lock
 import os
 from datetime import datetime as dt
-import sqlite3 as sql
+
 from dbHandler import dbHandle as db
 from ui import server_app
 
 class s_server:
 	def __init__(self,mlock,ports,shl)->None:
-		self.lock = Lock()
+		self.lock = Lock()	
 		self.mp_lock = mlock
 		self.date = f"{dt.now().strftime('%d %b %y')}"
 		self.port = 0
@@ -63,7 +63,6 @@ class s_server:
 
 
 	def handle_client(self,c_sock, gui,shl_status,idx):
-		conn2 = sql.connect('storage.db')
 		while True:
 			try:
 				data = c_sock.recv(1024)
@@ -98,17 +97,13 @@ class s_server:
 					self.clients.remove(c_sock)
 				c_sock.close()
 				break
-		conn2.close()
 
 	
 	def accept_clients(self,s_sock,gui, name, shl_status,idx):
 		while True:
 			c_sock, c_addr = s_sock.accept()
-			
-			if c_addr[1]==1234:
-				c_sock.close()
 
-			elif c_addr[1] != 5000:
+			if c_addr[1] != 5000:
 				c_sock.sendall(name.encode())
 				with self.mp_lock:
 					self.shl[3]+=1
