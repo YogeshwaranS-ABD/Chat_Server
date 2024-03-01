@@ -129,5 +129,84 @@ The number of servers need to be started will be received from th e user as inpu
 
 6. **stat_updater(self, gui)->None:**
 	* _gui_ : GUI objet in which the values are updated.
-		* when called, it calls gui.update_stat() with the values to be updated as arguments. 
+		* when called, it calls gui.update_stat() with the values to be updated as arguments.
 
+## dbHandler.py
+
+### class dbHandle
+>args:
+1. _mlock_ : Object of multiprocessing.Lock() class to syncronize the database handling among the servers
+2. _shared_list_ : A ShareableList object that stores the client count details.
+
+>Upon Construction the object can have following:
+1. _self.mp_lock_ : which stores the reference of the _mlock_ argument.
+2. _self.shl_ : To store the reference to the shared memory block of the argument _shared_list_.
+3. _self.date_ : Today's date.
+
+>**_Member Methods:_**
+1. **update_rating(self, rate) -> float:**
+	* _rate_ : rating given by the leaving client. 
+		* This function was called by the *send_msg()* function from the s_server class object when a client is about to leave. The passed argument is used to calculate the average rating and then the new value is stored in the shared memory object.
+2. **query_handler(self, operation='SELECT', table='server', value=None):**
+	* _operation_ : SELECT / INSERT / UPDATE.
+	* _table_ : name of the table from/to which the data if fetched/updated respectively.
+	* _value_ : Values to be updated/inserted in the database. Defaults to None, if the _operation_ is other than SELECT, then values need to be passed.
+		* Based on the argument _operation_ the corresponding actions are carried out with the database.
+		* When called with no arguments, this function returns the list of values from the table server.
+3. **retrive(self, name='Master') -> list | None:**
+	* _name_ : Name of the server that inserts the data into the databse.
+		* When called, it calls the _query_handler()_ function without passing any arguments to fetch the data from the databse. If an empty list is returned, then inserts a new row of records.
+		* Else, from the returned list, picks up the latest record and assign the values like total clients reached, lost clients, and monthly clients to the shared memory.
+		* This function will be called by the load balancer on startup to setup the values in the newly created shared memory.
+4. **update_exit_time(self, c_name:str, cl_in_time:dict) -> None:**
+	* _c_name_ : Name of the client, who is leaving.
+	* _cl_in_time_ : A dictionary with clinet name as key and their entry time as its corresponding value
+		* when called, it will update the exit time of the client in the session table.
+5. **add_session(self, values:tuple, cl_in_time:dict) -> None:**
+	* _values_ : new record of the new client, that need to be inserted in the database.
+	* _cl_in_time_ : A dictionary with clinet name as key and their entry time as its corresponding value.
+		* when called it inserts a new record for the newly connected client.
+
+## client.py
+### class SingleClient
+
+* args: None
+>Upon Construction the object can have following:
+1. _self.PORT_ : port number of the load balncer to which the client need to connect. It dafaults to 12345.
+2. _self.c_sock_ : A new socket is created
+3. _self.attempt_ : A integer, in which the no. of times the client attempted to connect to the server.
+
+>**_Member Methods:_**
+ 1. **reopen_socket(self)->None:**
+ 	* When called, the object's socket is closed and then reopen for new connection attempt.
+2. **recv_msg(self, c_sock:socket, ui:client_app) -> None:**
+ 	* _c_sock_ : A socket object of the client (self).
+ 	* _ui_ : An object for the GUI.
+ 		* This method was called as a new thread from the _start_client_ method.
+ 		* When created as a new thread, it waits to receive the mesage from the server and updates the GUI with that message by calling _ui.send_msg_ method from _client_app_ class in ui.py
+ 		* When the socket is closed, this thread will be terminated.
+3. **start_client(self)->None:**
+	* _wait_ : Float or int value in seconds, need to wait before retrying. It defaults to 10s.
+	* When this function is called, the client UI is started and the connection attempt to the server is made.
+	* Upon succesful connection, it receives the address of one of the servers that are running. Then the _self.c_sock_ is closed and re-opened to connect to the new address. Then the server name is received and the GUI is started.
+	* Upon failed connection, i.e if the string 'SNA wait' is received, and the self.attempt is 1, the program exits. else if the self.attempt is 0, then it will be incremented to one and then retry to connect after 10 seconds.
+
+## ui.py
+* This file has the GUI components of the server and client.
+> **class server_app**
+* this class contains the GUI components of the single server application, which will be used in _s_server_ class
+* Constructor of this class need to be passed with the details, that needs to be displayed on the GUI.
+	* _s_name_ : Name of the server.
+	* _rating_ : Average Rating of the server
+	* _count_ : A list that has number of clients on today, monthly, total approached and lost.
+	* _current_client_ : Name of the current client, defaults to None.
+
+> **class client_app**
+* args:
+	* _c_sock_ : socket object of the client
+	* _server_name_ : Name of the server, the client is connected with.
+* This class contains the GUI components of the client application.
+* The message typed in the text field is sent to the server through the c_sock socket object and the same is also updated in the GUI. this functionality is provided by the member method named _**send_msg()**_.
+* Upon clicking the finish button a feedback Dialogue box appears to get the rating for the server. This functionality is provided by the member method **_feedbk(self)_**
+
+> The other classe **class dialog2** will open a dialogu box upon failed connection attempt before retrying.

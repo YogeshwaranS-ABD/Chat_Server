@@ -17,7 +17,7 @@ class dbHandle:
 				self.shl[0] = (self.shl[0]*(self.shl[2]-1)+rate)/self.shl[2]
 			return self.shl[0]
 
-	def query_handler(self,operation='SELECT',table='server',value=None):
+	def query_handler(self,operation='SELECT',table='server',value=None) -> list | None:
 		conn = sql.connect('storage.db')
 		cursor =  conn.cursor()
 		if operation=='SELECT':
@@ -70,7 +70,7 @@ class dbHandle:
 			conn.commit()
 			conn.close()
 
-	def add_session(self,values:tuple,cl_in_time):
+	def add_session(self,values:tuple,cl_in_time:dict):
 		with self.mp_lock:
 			cl_in_time[values[1]]=values[2]
 			conn = sql.connect('storage.db')

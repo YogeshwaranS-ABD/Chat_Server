@@ -4,16 +4,16 @@ from time import sleep
 from ui import client_app, dialog, dialog2
 
 class SingleClient:
-	def __init__(self):
-		self.PORT = 12345
+	def __init__(self,PORT=12345):
+		self.PORT = PORT
 		self.c_sock = socket(AF_INET, SOCK_STREAM)
 		self.attempt = 0
 
-	def reopen_socket(self):
+	def reopen_socket(self)->None:
 		self.c_sock.close()
 		self.c_sock = socket(AF_INET,SOCK_STREAM)
 
-	def recv_msg(self,c_sock, ui):
+	def recv_msg(self,c_sock:socket, ui:client_app)->None:
 		while True:
 			try:
 				msg = c_sock.recv(1024).decode()
@@ -26,7 +26,7 @@ class SingleClient:
 				break
 
 
-	def start_client(self):
+	def start_client(self,wait:float|int=10):
 		try:
 			self.c_sock.connect(('localhost',self.PORT))
 			serve_addr = self.c_sock.recv(1024)
@@ -37,7 +37,7 @@ class SingleClient:
 				gui = dialog2()
 				self.attempt+=1
 				print("Retrying in 10s")
-				sleep(10)
+				sleep(wait)
 				self.reopen_socket()
 				self.start_client()
 			else:

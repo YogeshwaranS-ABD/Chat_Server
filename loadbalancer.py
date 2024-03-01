@@ -60,6 +60,9 @@ class MultipleServer:
 			# print('='*10,temp_sl,'='*10)
 			temp_sl.shm.close()
 			return ('localhost',self.ports[i])
+		else:
+			with self.mp_lock:
+				self.shl[4]+=1
 		return ''
 
 
