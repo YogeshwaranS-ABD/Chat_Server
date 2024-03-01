@@ -209,4 +209,6 @@ The number of servers need to be started will be received from th e user as inpu
 * The message typed in the text field is sent to the server through the c_sock socket object and the same is also updated in the GUI. this functionality is provided by the member method named _**send_msg()**_.
 * Upon clicking the finish button a feedback Dialogue box appears to get the rating for the server. This functionality is provided by the member method **_feedbk(self)_**
 
-> The other classe **class dialog2** will open a dialogu box upon failed connection attempt before retrying.
+> The another class **class dialog** will open a dialogue box if there is no server to connect, that is if the server application is not running.
+
+> The another class **class dialog2** will open a dialogu box upon failed connection attempt before retrying.
