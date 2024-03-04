@@ -7,8 +7,19 @@ time = f"{dt.now().strftime('%I:%M:%S %p')}"
 
 
 class client_app:
+	"""
+	This class describes the GUI components and their functions of a client application.
+	"""
 
-	def __init__(self,c_sock,server_name) -> None:
+	def __init__(self,c_sock,server_name:str) -> None:
+		"""
+		Constructs a new instance of thr client GUI.
+
+		:param      c_sock:       The socket object of this client
+		:type       c_sock:       socket
+		:param      server_name:  The server name, to which this client was connected
+		:type       server_name:  str
+		"""
 		self.c_sock=c_sock
 		self.server_name = server_name
 		self.app = Tk()
@@ -34,14 +45,28 @@ class client_app:
 
 	
 	def update_time(self):
+		"""
+		THis function calls itself every one second to update the time inth GUI of this client
+		"""
 		self.time_lbl.config(text=f"{dt.now().strftime('%I:%M:%S %p')}")
 		self.time_lbl.after(1000,self.update_time)
 	
-	def set_title(self, n, app):
-		if n != '':
-			app.title(n+' - Chat Window')
+	def set_title(self, name:str, app:Tk):
+		"""
+		Sets the title of the client GUI window as the name of this client
+
+		:param      name:  The name of this client
+		:type       name:  str
+		:param      app:   The GUI object of this client
+		:type       app:   tkinter.Tk class object
+		"""
+		if name != '':
+			app.title(name+' - Chat Window')
 
 	def msg_start(self):
+		"""
+		Functionality of the login Button, that set's the title of the client GUI and starts the main GUI for the client to send and receive messages.
+		"""
 		self.name = self.user.get()
 		self.set_title(self.name,self.app)
 		self.app1.destroy()
@@ -49,6 +74,9 @@ class client_app:
 		self.msg_box()
 
 	def login(self):
+		"""
+		GUI description of the position and size of the GUI and its components.
+		"""
 		self.app1.title('Login')
 		self.app1.geometry('320x240')
 		self.lbl.pack()
@@ -59,6 +87,9 @@ class client_app:
 		self.app1.mainloop()
 
 	def msg_box(self):
+		"""
+		The functions that defines the position of the components and starts the main GUI of the client
+		"""
 		self.update_time()
 		self.app.deiconify()
 		self.greet.pack()
@@ -71,7 +102,16 @@ class client_app:
 		self.finish_button.pack(side='left')
 		self.app.mainloop()
 
-	def send_msg(self,r_msg='',rec=0):
+	def send_msg(self,r_msg:str='',rec:int=0):
+		"""
+		Functionality of the SEND button. Sends the message string in the text box to the conected server.
+		Also updates the chat window.
+
+		:param      r_msg:  The message typed in the text box
+		:type       r_msg:  str
+		:param      rec:    Receive flag, if 1:just updates the chat window, else if 0: updates the chat window, and send the message to the server.
+		:type       rec:    int
+		"""
 		msg = self.text_box.get()
 		self.msg_field.configure(state='normal')
 		if r_msg!='':
@@ -86,6 +126,9 @@ class client_app:
 		self.text_box.delete(0,END)
 
 	def feedbk(self):
+		"""
+		This fuction defines the components of the feedback window, which will appear upon clinking the FINISH button.
+		"""
 
 		self.feedback = Toplevel()
 		self.lbl_1 = Label(self.feedback, text="Please rate the server, before you exit..\n\nRate from 1 to 5.\nyou can enter float values..")
@@ -102,12 +145,18 @@ class client_app:
 		
 
 	def exit_all(self):
+		"""
+		After getting the rating from the clietn, the rating is sent to the server, and all the GUI windows will be closed upon clicking submit button
+		"""
 		rate = self.rate.get()
 		self.c_sock.sendall(f"stop {rate}".encode())
 		self.feedback.destroy()
 		self.app.destroy()
 
 class dialog:
+	"""
+	This class describes a dialog that appears if there is no server active on the given address.
+	"""
 	def __init__(self) -> None:
 		self.app = Tk()
 		self.app.resizable(False, False)
@@ -126,6 +175,9 @@ class dialog:
 		self.app.destroy()
 
 class dialog2:
+	"""
+	This class describes a dialog box that tells to wait for some time, if the server is running but busy.
+	"""
 	def __init__(self) -> None:
 		self.app = Tk()
 		self.app.resizable(False, False)
@@ -144,7 +196,22 @@ class dialog2:
 		self.app.destroy()
 
 class server_app:
+	"""
+	This class describes the GUI components of a server application.
+	"""
 	def __init__(self, s_name:str,rating:float,count:list =[int,int,int,int], current_client='NONE') -> None:
+		"""
+		Constructs a new instance of the SERVER GUI.
+
+		:param      s_name:          The name of this server
+		:type       s_name:          str
+		:param      rating:          The Average rating of the server, from the database.
+		:type       rating:          float
+		:param      count:           The count of the clients connected to the server so far.
+		:type       count:           list
+		:param      current_client:  The name of the current client of this server
+		:type       current_client:  str
+		"""
 		self.rating = rating
 		self.count = count
 		self.stoped = False
@@ -193,15 +260,27 @@ class server_app:
 
 
 	def update_time(self):
+		"""
+		Updates the time of the SERVER GUI for every second.
+		"""
 		self.msg_time.config(text=f"{dt.now().strftime('%I:%M:%S %p')}")
 		self.msg_time.after(1000,self.update_time)
 
-	def msg_post(self,msg):
+	def msg_post(self,msg:str):
+		"""
+		Inserts the received message in the mesage field.
+
+		:param      msg:  The message received form the client or other server.
+		:type       msg:  str
+		"""
 		self.log.configure(state='normal')
 		self.log.insert(END,msg+'\n')
 		self.log.configure(state='disabled')
 
 	def stop(self):
+		"""
+		The functionality of the stop button to stop the server and close it's GUI window
+		"""
 		self.log.configure(state='normal')
 		if not self.stoped:
 			self.stoped = True
@@ -214,7 +293,14 @@ class server_app:
 		self.log.configure(state='disabled')
 		self.app.destroy()
 		# self.app.destroy()
-	def update_stat(self,count):
+
+	def update_stat(self,count:list):
+		"""
+		A function that updates the each field of the statistics bar in the GUI
+
+		:param      count:  The counnt of the clients connected so far.
+		:type       count:  list
+		"""
 		self.msg_rating.config(text=f"Average Rating : {count[0]:.2f}")
 		self.msg_today.config(text=f"Today : {count[1]}")
 		self.msg_month.config(text=f"This Month : {count[2]}")

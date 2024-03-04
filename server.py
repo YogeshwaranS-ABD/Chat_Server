@@ -9,7 +9,21 @@ from dbHandler import dbHandle as db
 from ui import server_app
 
 class s_server:
-	def __init__(self,mlock,ports,shl)->None:
+	"""
+	This class describes the functionality of the server.
+	"""
+
+	def __init__(self,mlock,ports:list,shl:ShareableList)->None:
+		"""
+		Constructs a new instance of the server
+
+		:param      mlock:  The lock object to synchronize the access of the shared memory.
+		:type       mlock:  multiprocessing.Lock
+		:param      ports:  The ports
+		:type       ports:  list
+		:param      shl:    The shl
+		:type       shl:    ShareableList
+		"""
 		self.lock = Lock()	
 		self.mp_lock = mlock
 		self.date = f"{dt.now().strftime('%d %b %y')}"
@@ -23,7 +37,13 @@ class s_server:
 		self.shl = ShareableList(name=shl.shm.name)
 		self.db = db(self.mp_lock,shl)
 
-	def send_to_servers(self,msg):
+	def send_to_servers(self,msg:str):
+		"""
+		Sends to servers.
+
+		:param      msg:  The message
+		:type       msg:  str
+		"""
 		with self.mp_lock:
 			for i in self.addr:
 				if i[1]!=self.port:
@@ -34,7 +54,19 @@ class s_server:
 					sock.sendall(msg.encode())
 
 
-	def send_msg(self,gui, message, s_sock, rate):
+	def send_msg(self,gui, message:str, s_sock:socket, rate:bool):
+		"""
+		Sends a message to other clients if the sending client is not rating the server.
+
+		:param      gui:      The graphical user interface
+		:type       gui:      ui.server_app
+		:param      message:  The message
+		:type       message:  str
+		:param      s_sock:   The socket object of the client that send the message
+		:type       s_sock:   socket
+		:param      rate:     If the client wants to rate or not
+		:type       rate:     bool
+		"""
 		if rate:
 			self.current_client = self.client_names[s_sock.getpeername()]
 			# s_sock.sendall("Server A : Rate this server from 1.0 to 5.0 ".encode())
@@ -55,6 +87,12 @@ class s_server:
 						c_sock.close()
 
 	def stat_updater(self,gui):
+		"""
+		Updates the statistic count of the clients in the GUI.
+
+		:param      gui:  The graphical user interface
+		:type       gui:  ui.server_app
+		"""
 		# self.query_handler(operation='UPDATE',table='server',value=(self.shl[0],self.today_clients,self.monthly_clients,self.total_clients_reached,self.lost))
 		# self.retrive()
 		if len(self.clients)!=0:
@@ -63,7 +101,19 @@ class s_server:
 			gui.update_stat([self.shl[0], self.shl[1],self.shl[2], self.shl[4], self.shl[3], "None"])
 
 
-	def handle_client(self,c_sock, gui,shl_status,idx):
+	def handle_client(self,c_sock:socket, gui,shl_status:ShareableList,idx:int):
+		"""
+		A function to handle a client, this function will be invoked in seperate threads for each client.
+
+		:param      c_sock:      The c sock
+		:type       c_sock:      socket
+		:param      gui:         The graphical user interface
+		:type       gui:         ui.server_app
+		:param      shl_status:  The status of each server, that will be maintained in a sharable list.
+		:type       shl_status:  ShareableList
+		:param      idx:         The index position of the PORT number to get the address for binding
+		:type       idx:         int
+		"""
 		while True:
 			try:
 				data = c_sock.recv(1024)
@@ -100,7 +150,21 @@ class s_server:
 				break
 
 	
-	def accept_clients(self,s_sock,gui, name, shl_status,idx):
+	def accept_clients(self,s_sock:socket,gui, name:str, shl_status:ShareableList,idx:int):
+		"""
+		{ function_description }
+
+		:param      s_sock:      The socket object of this server
+		:type       s_sock:      socket
+		:param      gui:         The graphical user interface
+		:type       gui:         ui.server_app
+		:param      name:        The name of this server
+		:type       name:        str
+		:param      shl_status:  The status of each server, that will be maintained in a sharable list.
+		:type       shl_status:  ShareableList
+		:param      idx:         The index position of the PORT number to get the address for binding
+		:type       idx:         int
+		"""
 		while True:
 			c_sock, c_addr = s_sock.accept()
 
@@ -138,6 +202,16 @@ class s_server:
 
 
 	def server(self,name:str, idx:int, shl_status:ShareableList):
+		"""
+		A function to create a server with it's GUI and a seprate thread to accept the clients as they request to connect.
+
+		:param      name:        The name of this server
+		:type       name:        str
+		:param      idx:         The status of each server, that will be maintained in a sharable list.
+		:type       shl_status:  ShareableList
+		:param      idx:         The index position of the PORT number to get the address for binding
+		:type       idx:         int
+		"""
 		self.name = name
 		self.port = self.addr[idx][1]
 
@@ -160,6 +234,9 @@ class s_server:
 		s_sock.close()
 
 	def __del__(self):
+		"""
+		Destructor of this class. deletes all the objects that are created using this class at the end to free the memory.
+		"""
 		self.shl.shm.close()
 		del(self.date, self.clients, self.client_names, self.cl_in_time, self.mp_lock, 
 			self.lock,self.current_client, self.shl, self.addr, self.port, self.name, self.db)

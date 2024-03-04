@@ -2,9 +2,15 @@ from multiprocessing.shared_memory import ShareableList
 from loadbalancer import MultipleServer
 
 
+def stop(shl:ShareableList,obj:MultipleServer):
+	"""
+	This function is to release the shared memory and delete the objects used.
 
-#This function is to release the shared memory and delete the objects used.
-def stop(shl,obj):
+	:param      shl:  The sharable list that was created with the name of 'client_stat'
+	:type       shl:  ShareableList
+	:param      obj:  The object of the loadbalancer class.
+	:type       obj:  MultipleServer
+	"""
 	shl.shm.close()
 	shl.shm.unlink()
 	del(obj,shl)
