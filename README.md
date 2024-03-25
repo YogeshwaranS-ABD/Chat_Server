@@ -27,16 +27,17 @@ Both server and client scripts are written assuming that the database already ha
 This repository has a database with empty tables in the above schema.
 > ***Note:*** In this application, PORT number 5000 is reserved for communication between servers. PORT number 12345 is for the load balancer, to which the clients request to connect.
 
-## main.py:
-The number of servers need to be started will be received from th e user as input.
-1. shl: Shared memory object named client status, that was created to store the counting of clients, daily, monthly, total and the lost clients and the average rating of the service.
-2. An object is created for MultipleServer with number of servers to be started, algorithm ('least connection', 'round robin') for balancing the clients among servers, and the approach to start the server either by 'fork' or by 'process' and the created shared memory object as arguments.
-3. The load balancer is started calling obj.start_balancer().
-4. Finally stop() is called to release the shared memory block and to delete those objects.
+## Starting server:
+The servers can be started by running any of the following scripts:
+1. iterative.py : To handle the clients in an iterative manner
+2. threaded.py : A seperate thread will be created to handle the incomming clinet
+3. pre_threaded.py : Some threads are created and waiting to handle incoming clients
+4. fork.py : A child process is created to handle the client.
+5. pre_fork.py : Some child processes are created and waiting to handle incoming clients
 
 
 ## loadbalancer.py
-### class MultipleServer
+### class Balancer
 >args:
 1. _n_ : Integer: Number of servers need to be started.
 2. _algorithm_ : String: Either 'least connection' or 'round robin'
@@ -55,14 +56,12 @@ The number of servers need to be started will be received from th e user as inpu
 9. _self.servers_sem_ : A ShareableList Object to be used to track the max number of clients of a server. The server will no longer accept a connection if it's corresponding value is zero. This is only applicable if _algorithm='least connection'_.
 
 >**_Member Methods:_**
-1. **Approach based methods**
-	* *start_server(self, serve) -> None* if *self.approach* is *'process'*
-	* *fork_server(self, serve) -> None* if *self.approach* is *'fork'*
-2. **Approach based methods**
+The Implementations of these methods are written under script named implementation.py
+1. **Algorithm based methods**
 	* *round_robin(self) -> tuple* returns the address of the servers in a circular fashion
 	* *lest_connection(self,shl_status:ShareableList) -> tuple* returns the address of the who has the least number of connected clients.
 
-3. **start_balancer(self) -> None:**
+2. **start_balancer(self) -> None:**
 	* When called, it will create a new socket and bind it to a port number **_12345_**, to which all the clients will request to connect.
 	* An object is created for the class **_s_server_** with name **_SERVER_** with the variable named **_serve_** by passing _self.mp_lock, self.ports, self.shl_ as arguments.
 	* With respect to *self.approach*, the serve object is passed to either ***fork_server()*** or ***start_server()***.
